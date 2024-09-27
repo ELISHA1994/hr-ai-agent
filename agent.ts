@@ -96,4 +96,12 @@ export async function callAgent(client: MongoClient, query: string, thread_id: s
 
         return { messages: [result] };
     }
+
+    // Define a new graph
+    const workflow = new StateGraph(GraphState)
+        .addNode("agent", callModel)
+        .addNode("tools", toolNode)
+        .addEdge("__start__", "agent")
+        .addConditionalEdges("agent", shouldContinue)
+        .addEdge("tools", "agent");
 }
