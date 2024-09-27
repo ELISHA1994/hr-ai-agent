@@ -18,5 +18,9 @@ export async function callAgent(client: MongoClient, query: string, thread_id: s
     const db = client.db(dbName);
     const collection = db.collection("employees");
 
-    // ... (We'll add the rest of the code here)
+    const GraphState = Annotation.Root({
+        messages: Annotation<BaseMessage[]>({
+            reducer: (x, y) => x.concat(y),
+        }),
+    });
 }
