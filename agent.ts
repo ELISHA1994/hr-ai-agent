@@ -23,4 +23,32 @@ export async function callAgent(client: MongoClient, query: string, thread_id: s
             reducer: (x, y) => x.concat(y),
         }),
     });
+
+    const employeeLookupTool = tool(
+        async ({ query, n = 10 }) => {
+            console.log("Employee lookup tool called");
+
+            const dbConfig = {
+                collection: collection,
+                indexName: "vector_index",
+                textKey: "embedding_text",
+                embeddingKey: "embedding",
+            };
+            const vectorStore = new MongoDBAtlasVectorSearch(
+                new OpenAIEmbeddings(),
+                dbConfig
+            );
+
+            const result = await vectorStore.similaritySearchWithScore(query, n);
+            return JSON.stringify(result);
+        },
+        {
+            name: "employee_lookup",
+            description: "Gathers employee details from the HR database",
+            schema: z.object({
+                query: z.string().describe("The search query"),
+                n: z.number().optional().default(10).describe("Number of results to return"),
+            }),
+        }
+    )
 }
