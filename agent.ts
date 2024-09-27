@@ -1,4 +1,4 @@
-import { OpenAIEmbeddings } from "@langchain/openai";
+import {ChatOpenAI, OpenAIEmbeddings} from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { AIMessage, BaseMessage, HumanMessage } from "@langchain/core/messages";
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
@@ -51,4 +51,14 @@ export async function callAgent(client: MongoClient, query: string, thread_id: s
             }),
         }
     )
+
+    const tools = [employeeLookupTool];
+
+    // We can extract the state typing via `GraphState.State`
+    const toolNode = new ToolNode<typeof GraphState.State>(tools);
+
+    const model = new ChatOpenAI({
+        modelName: "gpt-4o",
+        temperature: 0,
+    }).bindTools(tools);
 }
