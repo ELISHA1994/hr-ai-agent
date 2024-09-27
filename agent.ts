@@ -61,4 +61,39 @@ export async function callAgent(client: MongoClient, query: string, thread_id: s
         modelName: "gpt-4o",
         temperature: 0,
     }).bindTools(tools);
+
+    // Define the function that determines whether to continue or not
+    function shouldContinue(state: typeof GraphState.State) {
+        const messages = state.messages;
+        const lastMessage = messages[messages.length - 1] as AIMessage;
+
+        // If the LLM makes a tool call, then we route to the "tools" node
+        if (lastMessage.tool_calls?.length) {
+            return "tools";
+        }
+        // Otherwise, we stop (reply to the user)
+        return "__end__";
+    }
+
+    // Define the function that calls the model
+    async function callModel(state: typeof GraphState.State) {
+        const prompt = ChatPromptTemplate.fromMessages([
+            [
+                "system",
+                `You are a helpful AI assistant, collaborating with other assistants. Use the provided tools to progress towards answering the question. If you are unable to fully answer, that's OK, another assistant with different tools will help where you left off. Execute what you can to make progress. If you or any of the other assistants have the final answer or deliverable, prefix your response with FINAL ANSWER so the team knows to stop. You have access to the following tools: {tool_names}.\n{system_message}\nCurrent time: {time}.`,
+            ],
+            new MessagesPlaceholder("messages"),
+        ]);
+
+        const formattedPrompt = await prompt.formatMessages({
+            system_message: "You are helpful HR Chatbot Agent.",
+            time: new Date().toISOString(),
+            tool_names: tools.map((tool) => tool.name).join(", "),
+            messages: state.messages,
+        });
+
+        const result = await model.invoke(formattedPrompt);
+
+        return { messages: [result] };
+    }
 }
