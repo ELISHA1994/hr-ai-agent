@@ -104,4 +104,22 @@ export async function callAgent(client: MongoClient, query: string, thread_id: s
         .addEdge("__start__", "agent")
         .addConditionalEdges("agent", shouldContinue)
         .addEdge("tools", "agent");
+
+    // Initialize the MongoDB memory to persist state between graph runs
+    const checkpointer = new MongoDBSaver({ client, dbName });
+
+    // This compiles it into a LangChain Runnable.
+    // Note that we're passing the memory when compiling the graph
+    const app = workflow.compile({ checkpointer });
+
+    const finalState = await app.invoke(
+        {
+            messages: [new HumanMessage(query)],
+        },
+        { recursionLimit: 15, configurable: { thread_id: thread_id } }
+    );
+
+    console.log(finalState.messages[finalState.messages.length - 1].content);
+
+    return finalState.messages[finalState.messages.length - 1].content;
 }
